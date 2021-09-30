@@ -10,23 +10,26 @@ import java.util.*;
 import java.util.List;
 import java.util.logging.Level;
 
-import static com.sun.xml.internal.ws.spi.db.BindingContextFactory.LOGGER;
 import static java.lang.Math.max;
 
 
 public class minablocks {
 
     private static Map<String, String> addressRanges;
-    public static String rootPath = "/root";
-    public static String fetchAndSavePath = "/Users/dheeraj-9768/Documents/Mina-Logs/";
+    public static String rootPath;
+    public static String fetchAndSavePath;
 
 
     public static void loadDataFromFiles() throws Exception
     {
-        InputStream inputStream = new FileInputStream(new File("serverAddresses.yml"));//No I18N
+        InputStream serverAddrStream = new FileInputStream(new File("serverAddresses.yml"));//No I18N
+        InputStream filePathStream = new FileInputStream(new File("filePaths.yml"));//No I18N
+        Map<String, String> tempFilePaths = new HashMap<>();
         Yaml yaml = new Yaml();
-        addressRanges = (Map<String, String>) yaml.load(inputStream);
-        LOGGER.log(Level.INFO, "FILE: orgToFileMapping: "+addressRanges);
+        addressRanges = (Map<String, String>) yaml.load(serverAddrStream);
+        tempFilePaths = (Map<String, String>) yaml.load(filePathStream);
+        rootPath = tempFilePaths.get("server");
+        fetchAndSavePath = tempFilePaths.get("local");
     }
 
 

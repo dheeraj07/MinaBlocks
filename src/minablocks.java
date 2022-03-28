@@ -16,6 +16,7 @@ import static java.lang.Math.max;
 public class minablocks {
 
     private static Map<String, String> addressRanges;
+    private static Map<String, String> userNames;
     public static String rootPath;
     public static String fetchAndSavePath;
 
@@ -24,22 +25,23 @@ public class minablocks {
     {
         InputStream serverAddrStream = new FileInputStream(new File("serverAddresses.yml"));//No I18N
         InputStream filePathStream = new FileInputStream(new File("filePaths.yml"));//No I18N
+        InputStream UserNamesStream = new FileInputStream(new File("serverUserNames.yml"));//No I18N
         Map<String, String> tempFilePaths = new HashMap<>();
         Yaml yaml = new Yaml();
         addressRanges = (Map<String, String>) yaml.load(serverAddrStream);
         tempFilePaths = (Map<String, String>) yaml.load(filePathStream);
+        userNames = (Map<String, String>) yaml.load(UserNamesStream);
         rootPath = tempFilePaths.get("server");
         fetchAndSavePath = tempFilePaths.get("local");
     }
 
 
-    public static void saveFile(String fileName, int noOfMissingBlocks, String fetchAndSavePath, String timeStamp) throws Exception
+    public static void saveFile(String fileName, String fetchAndSavePath, String timeStamp, String fileData) throws Exception
     {
-        String missedBlocksInThisRun = "Total number of missing blocks in "+fileName + " are :  " + noOfMissingBlocks;
         fileName = fileName.substring(0, fileName.length() - 4) + "_" + timeStamp;
         BufferedWriter writer = new BufferedWriter(new FileWriter(fetchAndSavePath + fileName + "_REPORT.txt", true));
         writer.append("\n");
-        writer.append(missedBlocksInThisRun);
+        writer.append(fileData);
         writer.close();
     }
 
@@ -49,7 +51,7 @@ public class minablocks {
        {
            JSch jsch = new JSch();
            Session session = null;
-           session = jsch.getSession("root", entry.getKey(), 22);
+           session = jsch.getSession(userNames.get(entry.getKey()), entry.getKey(), 22);
            session.setTimeout(30 * 1000);
            session.setConfig("StrictHostKeyChecking", "no");
            session.setPassword(entry.getValue());
@@ -134,7 +136,7 @@ public class minablocks {
         Set<Integer> presentBlocks = new HashSet<>();
         Integer initialBlock = getInitialBlockNumber(fileNames);
         System.out.println("Starting analysing from Block number:    "+initialBlock);
-
+        String dailyMissedBlocksLog = "";
         for (String fileName : fileNames)
         {
             Integer block = initialBlock;
@@ -177,11 +179,12 @@ public class minablocks {
                     }
                 }
             }
-            saveFile(fileName, noOfMissingBlocks, fetchAndSavePath, timeStamp);
+            dailyMissedBlocksLog += "\n\nTotal number of missing blocks in server: "+fileName+" are: " + noOfMissingBlocks;
             System.out.println("\nTotal number of missing blocks in fileName: "+fileName+" are: " + noOfMissingBlocks+"\n\n");
         }
-        System.out.println("=======================================================END=======================================================\n\n");
-        System.out.println("Total missing blocks are:  " + missedBlocks.size());
+
+        String endDelimitter = "\n\n=======================================================END=======================================================\n\n";
+        System.out.println(endDelimitter);
         for(Integer in: presentBlocks)
         {
             if(missedBlocks.contains(in))
@@ -189,10 +192,18 @@ public class minablocks {
                 missedBlocks.remove(in);
             }
         }
-        for(Integer in: missedBlocks)
+        System.out.println("Total missing blocks are:  " + missedBlocks.size());
+        dailyMissedBlocksLog += endDelimitter + "\nTotal missing blocks are:  " + missedBlocks.size()+"\n";
+
+        List<Integer> finalMisBlocks = new ArrayList<>(missedBlocks);
+        Collections.sort(finalMisBlocks);
+
+        for(Integer in: finalMisBlocks)
         {
             System.out.println(in);
+            dailyMissedBlocksLog += "\n"+in;
         }
+        saveFile("TotalMissedBlocks.csv", fetchAndSavePath, timeStamp, dailyMissedBlocksLog);
     }
 
 
